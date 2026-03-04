@@ -1,0 +1,425 @@
+Hardware Construction Report: 30MHz DDS Signal Generator
+
+Document Title: Hardware Construction Report: 30MHz DDS Signal
+Generator
+Project: AD9850-Based 30MHz Signal Generator with SCPI Remote
+Control
+Version: 1.0
+Date: 2026-03-03
+Author: Jan Engelbrecht Pedersen
+Based on FRS ID: FRS-AD9850-DDS-02, Rev 2.0
+
+1.0 Executive Summary
+
+This report details the hardware architecture and construction
+of a 30MHz Direct Digital Synthesis (DDS) signal generator.
+The design is built around the ubiquitous Arduino UNO platform
+and the Analog Devices AD9850 DDS module. It features a local
+user interface with an LCD and rotary encoder, and a remote
+SCPI control interface via USB.
+
+The hardware is divided into five primary subsystems: the
+Processing Core (Arduino UNO), the DDS Frequency Synthesis
+Engine (AD9850 module), the User Interface (LCD, encoder,
+buttons), the RF Output Stage (attenuator and BF198 amplifier),
+and the Power Distribution. This report provides a detailed
+analysis of component selection, circuit implementation, and
+engineering trade-offs for each subsystem, culminating in a
+complete Bill of Materials (BOM) and a netlist.
+
+2.0 System Architecture Overview
+
+The system's hardware architecture follows a modular design
+philosophy, ensuring clean signal paths and logical separation
+of functions. The following description illustrates the primary
+subsystems and their interconnections.
+
+The Processing Core, an Arduino UNO with an ATmega328P
+microcontroller, acts as the system controller. It manages the
+user interface, calculates frequency tuning words, and sends
+them to the DDS module. It also handles the SCPI command
+processing over the serial or USB interface.
+
+The DDS Synthesis Engine, an AD9850 module, generates the raw
+sine wave signal based on the 32-bit tuning word received from
+the Arduino.
+
+The User Interface, consisting of a 16x2 LCD, a quadrature
+rotary encoder, and two push buttons, allows for local control
+of frequency, tuning step, and IF offset.
+
+The RF Output Stage is an analog section that conditions the
+DDS output. A potentiometer provides variable attenuation,
+followed by a fixed-gain, wideband amplifier built around a
+BF198 transistor to provide a low-impedance, usable signal
+level at a BNC connector.
+
+For Power Distribution, the entire system is powered via the
+Arduino UNO's USB-B port. The Arduino's regulated +5V output
+pin supplies the DDS module, LCD, and the RF amplifier stage.
+
+3.0 Detailed Subsystem Analysis and Component Selection
+
+This section provides a detailed engineering analysis of each
+hardware subsystem, justifying component choices and explaining
+the implementation.
+
+3.1 Processing Core: Arduino UNO (ATmega328P)
+
+Specification Reference: HW-01
+
+Component: Arduino UNO R3 or clone based on the ATmega328P
+microcontroller.
+
+Engineering Justification:
+
+The ATmega328P provides adequate I O resources. It has
+sufficient digital I O pins (14) and analog inputs (6) to
+interface with the LCD using 6 pins, the DDS module using 4
+pins, the rotary encoder using 3 pins, and the push buttons
+using 2 pins. This meets all requirements outlined in section
+3.2 of the FRS.
+
+Running at 16 MHz, it has ample computational headroom for the
+main tasks. These tasks include reading the encoder via
+interrupts, performing 32-bit frequency calculations using
+floating-point arithmetic for the tuning word, updating the
+LCD, and parsing incoming SCPI commands.
+
+The on-chip peripherals are critical. The built-in EEPROM of
+1 KB is essential for non-volatile storage of the last used
+frequency, as defined in requirements SW-MEM-01, 02, and 03.
+The hardware UART facilitates the SCPI remote control interface
+as per SW-SCPI-01 over USB.
+
+The Arduino platform was chosen for its widespread use,
+extensive library support such as the LiquidCrystal library,
+and ease of programming. This makes the project accessible for
+modification and replication.
+
+3.2 DDS Frequency Synthesis Engine: AD9850 Module
+
+Specification Reference: HW-03, SW-FRQ-01, SW-FRQ-02, SW-FRQ-03
+
+Component: AD9850 DDS Module. This is a pre-built module
+containing the AD9850 IC, a 125 MHz crystal oscillator, and
+passive filtering.
+
+Engineering Justification:
+
+The AD9850 is specified to generate sine waves from DC to
+30 MHz as required by SW-FRQ-01, making it ideal for the
+project's target range. Its output can theoretically go up to
+62.5 MHz which is half the clock, but the 30 MHz limit ensures
+good signal purity.
+
+With a 32-bit frequency tuning word and a 125 MHz system clock,
+the frequency resolution as per SW-FRQ-02 is calculated as
+follows. Resolution equals 125,000,000 divided by 2 to the
+power of 32. This results in approximately 0.0291 Hz. This far
+exceeds the 10 Hz tuning step requirement.
+
+The 4-wire serial interface as described in HW-07 is chosen
+over the parallel interface to minimize pin usage on the
+Arduino. This connection is simple and robust.
+
+The tuning word calculation is performed as per SW-FRQ-03. The
+tuning word, known as Delta Phase, is calculated by the formula
+where Delta Phase equals the desired output frequency in Hertz
+multiplied by 2 to the power of 32, divided by the reference
+clock frequency of 125,000,000 Hertz. The firmware implements
+this calculation using double-precision floating-point
+arithmetic to prevent 32-bit integer overflow and maintain
+accuracy.
+
+3.3 User Interface Hardware
+
+3.3.1 LCD Display (16x2)
+
+Specification Reference: HW-04
+
+Component: Standard 16x2 Character LCD Module with HD44780-
+compatible driver.
+
+Implementation:
+
+The LCD is connected in 4-bit mode, using pins D4 through D7,
+to conserve Arduino I O pins as specified. This requires only
+6 pins total which are RS, Enable, and D4 through D7.
+
+A potentiometer, typically 10 kOhm, is connected to the LCD's
+Vo pin which is pin 3. The wiper is connected to the pin and
+the outer legs are connected to +5V and GND. This allows the
+user to manually adjust the display contrast for optimal
+viewing under varying lighting conditions, as per HW-08.
+
+Engineering Justification:
+
+The HD44780 is an industry-standard controller, ensuring
+compatibility with the LiquidCrystal library, which simplifies
+the firmware. The 4-bit mode is a standard technique to reduce
+pin count without losing functionality.
+
+3.3.2 Rotary Encoder and Buttons
+
+Specification Reference: HW-05, HW-06
+
+Components:
+
+A panel-mount quadrature encoder with an integrated momentary
+push button is used, such as a KY-040 style or similar. Two
+momentary, normally-open tactile push buttons are used for
+control.
+
+Implementation:
+
+Encoder Pins A and B are connected to Arduino D2 and D3. These
+pins are configured to trigger Pin Change Interrupts. This is
+critical for real-time performance, ensuring that no encoder
+steps are missed even when the main loop is busy with LCD
+updates or SCPI command parsing, as described in the firmware's
+interrupt system section.
+
+The encoder button is connected to Arduino D4. An internal
+pull-up resistor is enabled in software, eliminating the need
+for an external component.
+
+The control buttons are connected to Arduino A0 and A5. They
+are wired as active-low, and internal pull-up resistors are
+enabled. This simple, debounced via software interface is
+robust and cost-effective.
+
+The requirement HW-05 notes that the encoder button shares pin
+D4 with LCD D7. This is a valid design choice. The LCD D7 line
+is an output from the Arduino, and the button is an input. When
+the LCD is not being written to, reading the button state on
+this pin is safe. The firmware manages this by ensuring reads
+happen when the LCD is idle.
+
+3.4 RF Output Stage
+
+This is the most critical analog section, requiring careful
+component selection to ensure wideband, low-distortion
+performance up to 30 MHz.
+
+3.4.1 Variable Attenuator
+
+Specification Reference: HW-RF-01
+
+Component: Potentiometer, 1 kOhm. Logarithmic or linear taper
+is acceptable.
+
+Engineering Justification:
+
+The function of the attenuator is as follows. The AD9850's
+output is a current-steering DAC with a typical output
+compliance voltage. Connecting it directly to a voltage divider
+provides a simple and effective means of amplitude control.
+
+The value selection of 1 kOhm represents a trade-off. It is
+high enough not to excessively load the AD9850's output stage,
+which is designed to drive a few hundred ohms. It is low enough
+to provide a reasonably low source impedance for the following
+amplifier stage. A lower value such as 100 ohms would provide
+better impedance matching but could distort the DDS output. A
+higher value such as 10 kOhm would minimize loading but make
+the output more susceptible to capacitive coupling and noise.
+
+The configuration of the potentiometer is as a variable voltage
+divider. The top terminal receives the signal from the AD9850,
+the bottom terminal is connected to ground, and the wiper feeds
+the amplifier. This creates a simple, passive attenuator.
+
+3.4.2 Fixed-Gain RF Amplifier (Grounded-Collector)
+
+Specification Reference: HW-RF-02, HW-RF-03, HW-RF-04, HW-RF-05
+
+Component: BF198 NPN Silicon RF Transistor.
+
+Engineering Justification:
+
+The transistor choice, the BF198, is specifically designed for
+RF amplifier applications up to VHF frequencies. Key parameters
+include a high transition frequency f sub T, typically around
+400 to 600 MHz. It also features low feedback capacitance and
+good linearity. These characteristics are essential for
+maintaining signal fidelity and providing gain across the
+entire 0 to 30 MHz band without instability.
+
+The configuration chosen is grounded-collector, also known as
+common collector or emitter-follower. This configuration is
+chosen for its excellent impedance transformation properties.
+It presents a high input impedance to the attenuator wiper,
+preventing loading of the DDS output. It provides a low output
+impedance, enabling the generator to drive 50-ohm coaxial
+cables and loads connected to the BNC output. It provides
+current gain but a voltage gain of approximately one.
+
+Biasing as per HW-RF-05 requires a stable DC operating point
+for linear amplification. A voltage divider network sets the
+DC base voltage. One resistor, R B1, connects from +5V to the
+base. Another resistor, R B2, connects from the base to ground.
+This voltage is chosen to place the emitter at approximately
+half the supply voltage of 2.5V to allow for maximum
+symmetrical output voltage swing. Resistor values in the range
+of 10k to 47k ohms are typical to provide a stiff bias voltage
+without drawing excessive current.
+
+An emitter resistor, R E, is placed between the emitter and
+ground. It provides DC negative feedback, stabilizing the bias
+point against temperature variations and transistor h sub FE
+variations. It also helps set the output impedance. A value
+between 100 and 220 ohms is typical.
+
+AC coupling is achieved using capacitors for the input and
+output. These capacitors couple the AC signal while blocking
+DC. This allows the DC bias points of the transistor, base and
+emitter, to be set independently of the source and load.
+
+The input coupling capacitor, C in, prevents the DC voltage at
+the attenuator wiper, which is at 0V DC, from affecting the
+base bias. It forms a high-pass filter with the input impedance
+of the amplifier. A value of 0.1 microfarad to 1 microfarad,
+ceramic type, is sufficient to pass frequencies down to well
+below 1 Hz.
+
+The output coupling capacitor, C out, blocks the DC emitter
+voltage of approximately 2.5V from appearing on the BNC output
+connector as required by HW-RF-07. This protects any connected
+equipment. It also forms a high-pass filter with the load. A
+value of 10 microfarad to 47 microfarad, electrolytic type,
+possibly with a small ceramic capacitor in parallel for high-
+frequency bypass, ensures good low-frequency response.
+
+4.0 Bill of Materials (BOM) / Stykliste
+
+The following is a complete list of components required for
+construction.
+
+Item 1 is the microcontroller board, reference U1, described
+as an Arduino UNO R3 or clone, quantity 1. It serves as the
+processing core.
+
+Item 2 is the DDS module, reference U2, described as an AD9850
+Module with 125 MHz oscillator, quantity 1.
+
+Item 3 is the LCD module, reference U3, described as a 16x2
+Character LCD with HD44780 driver, quantity 1.
+
+Item 4 is a potentiometer for contrast, reference R1, value
+10 kOhm, quantity 1. It can be PCB mount or panel mount.
+
+Item 5 is a potentiometer for the attenuator, reference R2,
+value 1 kOhm, quantity 1. It should be panel mount as it is
+crucial for the user interface.
+
+Item 6 is the RF transistor, reference Q1, type BF198 or
+equivalent like 2N918, quantity 1. It is an NPN Silicon RF
+Transistor.
+
+Item 7 is a bias divider resistor, top, reference R B1, value
+22 kOhm, quantity 1. It should be 1/4W or smaller. The value
+is approximate.
+
+Item 8 is a bias divider resistor, bottom, reference R B2,
+value 10 kOhm, quantity 1. It should be 1/4W or smaller. The
+value is approximate.
+
+Item 9 is the emitter resistor, reference R E, value 150 Ohm,
+quantity 1. It should be 1/4W or smaller. The value is
+approximate.
+
+Item 10 is the input coupling capacitor, reference C in, value
+0.1 microfarad, quantity 1. It should be a ceramic type.
+
+Item 11 is the output coupling capacitor, reference C out,
+value 10 microfarad, quantity 1. It should be an electrolytic
+type rated for 16V or higher.
+
+Item 12 is a power supply bypass capacitor, reference C bypass,
+value 0.1 microfarad, quantity 1. It should be a ceramic type
+and placed near the transistor.
+
+Item 13 comprises tactile switches, reference SW1, described as
+6x6mm, quantity 2. These are for the increment button on A0 and
+the IF button on A5.
+
+Item 14 is the rotary encoder, reference SW2, type quadrature
+with push button, quantity 1. It should have 20 to 24 detents
+per rotation.
+
+Item 15 is the output connector, reference J1, type BNC Female,
+chassis mount, quantity 1. It should be isolated from the
+board.
+
+Item 16 is a PCB or protoboard, quantity 1, for mounting the
+discrete components.
+
+Item 17 is an enclosure or project box, quantity 1, to house
+the entire system.
+
+Item 18 covers additional materials such as wire, knobs, and
+other hardware, as needed.
+
+5.0 Netlist
+
+This netlist describes the electrical connections between
+components. Connections are grouped by function.
+
+For power and ground, the +5V net is connected to the Arduino
+5V Pin. The GND net is connected to the Arduino GND Pin.
+
+For the connections between the Arduino and the AD9850 Module
+U2, the following connections are made. Arduino D8, which is
+PIN_AD9850_W_CLK, connects to AD9850 Pin 7, W_CLK. Arduino D9,
+which is PIN_AD9850_FQ_UD, connects to AD9850 Pin 8, FQ_UD.
+Arduino D11, which is PIN_AD9850_DATA, connects to AD9850 Pin
+9, DATA. Arduino D10, which is PIN_AD9850_RESET, connects to
+AD9850 Pin 12, RESET. The AD9850 Module +5V pin connects to the
++5V net. The AD9850 Module GND pin connects to the GND net.
+
+For the connections between the Arduino and the LCD U3, the
+following connections are made. Arduino D12, which is
+PIN_LCD_RS, connects to LCD Pin 4, RS. Arduino D13, which is
+PIN_LCD_ENABLE, connects to LCD Pin 6, E. Arduino D7, which is
+PIN_LCD_D4, connects to LCD Pin 11, D4. Arduino D6, which is
+PIN_LCD_D5, connects to LCD Pin 12, D5. Arduino D5, which is
+PIN_LCD_D6, connects to LCD Pin 13, D6. Arduino D4, which is
+PIN_LCD_D7, connects to LCD Pin 14, D7. LCD Pin 2, VDD,
+connects to the +5V net. LCD Pin 1, VSS, connects to the GND
+net. LCD Pin 3, V0, connects to the wiper of the Contrast Pot
+R1. Contrast Pot R1 leg 1 connects to the +5V net. Contrast Pot
+R1 leg 3 connects to the GND net.
+
+For the connections between the Arduino and the input devices,
+the following connections are made. Arduino D2 connects to
+Rotary Encoder Pin A. Arduino D3 connects to Rotary Encoder Pin
+B. Arduino D4 connects to one side of the Rotary Encoder Push
+Button SW2-PB. The other side of that button connects to the
+GND net. Arduino A0 connects to one side of the Increment
+Button SW1. The other side of that button connects to the GND
+net. Arduino A5 connects to one side of the IF Toggle Button
+SW1. The other side of that button connects to the GND net.
+
+For the RF output stage including the attenuator and amplifier,
+the following connections are made. The AD9850 Output Pin, which
+is Pin 21, IOUT, connects to the top terminal of the Attenuator
+Pot R2. The bottom terminal of the Attenuator Pot R2 connects
+to the GND net. The wiper of the Attenuator Pot R2 connects to
+one leg of the input coupling capacitor C in. The other leg of
+C in connects to the base of Q1, the BF198 transistor. The +5V
+net connects to one leg of the top bias resistor R B1. The
+other leg of R B1 connects to the base of Q1. The GND net
+connects to one leg of the bottom bias resistor R B2. The other
+leg of R B2 connects to the base of Q1. The collector of Q1
+connects to the +5V net for the grounded-collector
+configuration. The emitter of Q1 connects to one leg of the
+emitter resistor R E. The other leg of R E connects to the GND
+net. The emitter of Q1 also connects to the positive leg of the
+output coupling capacitor C out, observing polarity. The
+negative leg of C out connects to the center pin of the BNC
+Connector J1. The BNC Connector shell J1 connects to the GND
+net. Finally, the bypass capacitor C bypass of 0.1 microfarad
+is connected between the +5V net and the GND net, and it should
+be placed physically near the transistor's collector and
+emitter connections.

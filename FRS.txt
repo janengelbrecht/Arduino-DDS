@@ -1,0 +1,237 @@
++----------------------------------------------------------------------------------------------------------+
+|                          FUNCTIONAL REQUIREMENTS SPECIFICATION                                           |
+|                            ARDUINO UNO DDS SIGNAL GENERATOR                                              |
+|----------------------------------------------------------------------------------------------------------|
+| Specification ID: FRS-AD9850-DDS-02                                                                      |
+| Revision: 2.0                                                                                            |
+| Date: 2026-03-03                                                                                         |
+| Author: Jan Engelbrecht Pedersen                                                                         |
++----------------------------------------------------------------------------------------------------------+
+
++==========================================================================================================+
+|1.0 INTRODUCTION                                                                                          |
++==========================================================================================================+
+This document defines the complete set of requirements for a 30MHz Direct Digital Synthesis (DDS)
+Signal Generator based on the Arduino UNO platform. The system utilizes the Analog Devices AD9850
+module and includes a local user interface with an LCD and rotary encoder, as well as a remote
+control interface compliant with the SCPI (Standard Commands for Programmable Instruments) standard.
+The DDS output is passed through an adjustable attenuator and a fixed-gain, wideband RF amplifier
+stage to provide a usable signal level at a BNC output connector. All requirements are derived from
+the provided firmware (firmware.ino) and hardware specifications.
+
++==========================================================================================================+
+|2.0 APPLICABLE DOCUMENTS                                                                                  |
++==========================================================================================================+
+[AD1] AD9850 Datasheet: CMOS 125 MHz Complete DDS Synthesizer - Analog Devices
+[IEEE1] IEEE Std 488.2-1992: IEEE Standard Codes, Formats, Protocols, and Common Commands
+[SCPI1] SCPI Standard 1999.0: Standard Commands for Programmable Instruments
+[BF198] BF198 Datasheet: NPN Silicon RF Transistor
+
++==========================================================================================================+
+|3.0 HARDWARE REQUIREMENTS (HW)                                                                            |
++==========================================================================================================+
+| 3.1 Core Processor and Power                                                                             |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-01 | PROCESSOR: The system shall be based on an Arduino UNO R3 (or clone) using the ATmega328P        |
+|       | microcontroller.                                                                                 |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-02 | POWER: The system shall be powered via the Arduino UNO's USB-B port (+5V DC). The AD9850         |
+|       | module, LCD, and the RF output amplifier stage shall derive their power from the Arduino's       |
+|       | +5V output pin.                                                                                  |
+| 3.2 Core DDS and Control Hardware                                                                        |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-03 | DDS MODULE: The system shall incorporate an AD9850 DDS module capable of generating sine         |
+|       | waves from 0 Hz to 30 MHz. The module shall be powered by +5V DC.                                |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-04 | DISPLAY: The system shall include a 16x2 Character LCD Module with an HD44780-compatible         |
+|       | driver. It shall be connected in 4-bit mode.                                                     |
+|       |   • PIN_LCD_RS (Arduino D12)  -> LCD Pin 4 (RS)                                                  |
+|       |   • PIN_LCD_ENABLE (Arduino D13) -> LCD Pin 6 (E)                                                |
+|       |   • PIN_LCD_D4 (Arduino D7)   -> LCD Pin 11 (D4)                                                 |
+|       |   • PIN_LCD_D5 (Arduino D6)   -> LCD Pin 12 (D5)                                                 |
+|       |   • PIN_LCD_D6 (Arduino D5)   -> LCD Pin 13 (D6)                                                 |
+|       |   • PIN_LCD_D7 (Arduino D4)   -> LCD Pin 14 (D7)                                                 |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-05 | ROTARY ENCODER: The system shall include a quadrature rotary encoder with an integrated          |
+|       | push-button for tuning.                                                                          |
+|       |   • Encoder Pin A -> Arduino D2 (Interrupt-capable)                                              |
+|       |   • Encoder Pin B -> Arduino D3 (Interrupt-capable)                                              |
+|       |   • Encoder Push-Button -> Arduino D4 (with internal pull-up)                                    |
+|       | Note: D4 is shared with LCD D7; the button will share this pin.                                  |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-06 | CONTROL BUTTONS: The system shall include two independent, momentary push buttons. Each          |
+|       | shall be wired as active-low with the corresponding Arduino pin configured with an internal      |
+|       | pull-up resistor.                                                                                |
+|       |   • Button 1 (Increment Select) -> Arduino A0                                                    |
+|       |   • Button 2 (IF Offset Toggle) -> Arduino A5                                                    |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-07 | AD9850 INTERFACE: The Arduino UNO shall be connected to the AD9850 DDS module using a 4-wire     |
+|       | serial interface.                                                                                |
+|       |   • PIN_AD9850_W_CLK (Arduino D8)  -> AD9850 Pin 7 (W_CLK)                                       |
+|       |   • PIN_AD9850_FQ_UD (Arduino D9)  -> AD9850 Pin 8 (FQ_UD)                                       |
+|       |   • PIN_AD9850_DATA (Arduino D11)  -> AD9850 Pin 9 (DATA)                                        |
+|       |   • PIN_AD9850_RESET (Arduino D10) -> AD9850 Pin 12 (RESET)                                      |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-08 | LCD CONTRAST: The system shall provide a potentiometer connected to the LCD's Vo pin (Pin 3) for |
+|       | manual contrast adjustment. The wiper of the potentiometer shall be connected to the center pin. |
+| 3.3 RF Output Stage (HW-RF)                                                                              |
+|-------|--------------------------------------------------------------------------------------------------|
+| HW-RF-01 | SIGNAL ATTENUATOR: The output from the AD9850 module shall be connected to a potentiometer    |
+|          | configured as a variable attenuator.                                                          |
+|          |   • Potentiometer Top Terminal -> AD9850 Output Pin                                           |
+|          |   • Potentiometer Bottom Terminal -> Ground (0V)                                              |
+|          |   • Potentiometer Wiper Terminal -> Output to Amplifier Stage                                 |
+|----------|-----------------------------------------------------------------------------------------------|
+| HW-RF-02 | AMPLIFIER STAGE - GENERAL: The system shall include a fixed-gain RF amplifier stage based on  |
+|          | a grounded-collector (common collector) configuration to provide current gain and impedance   |
+|          | matching.                                                                                     |
+|----------|-----------------------------------------------------------------------------------------------|
+| HW-RF-03 | AMPLIFIER STAGE - TRANSISTOR: The amplifier shall use an NPN silicon RF transistor, type      |
+|          | BF198 (or equivalent).                                                                        |
+|----------|-----------------------------------------------------------------------------------------------|
+| HW-RF-04 | AMPLIFIER STAGE - CONFIGURATION: The transistor shall be configured as a grounded-collector   |
+|          | (common collector) circuit. The signal from the attenuator wiper shall be AC-coupled to the   |
+|          | base of the transistor via a DC-blocking capacitor.                                           |
+|----------|-----------------------------------------------------------------------------------------------|
+| HW-RF-05 | AMPLIFIER STAGE - BIASING: Appropriate biasing resistors shall be provided to establish a     |
+|          | correct and stable DC operating point for the BF198 transistor, powered from the +5V supply.  |
+|----------|-----------------------------------------------------------------------------------------------|
+| HW-RF-06 | OUTPUT CONNECTOR: The output of the grounded-collector amplifier stage shall be connected     |
+|          | to a BNC female chassis-mount connector, providing the main signal output for the generator.  |
+|----------|-----------------------------------------------------------------------------------------------|
+| HW-RF-07 | OUTPUT COUPLING: The signal path from the amplifier to the BNC connector may include a DC-    |
+|          | blocking capacitor to ensure no DC voltage is present on the output.                          |
++==========================================================================================================+
+|4.0 SOFTWARE REQUIREMENTS (SW)                                                                            |
++==========================================================================================================+
+| 4.1 General System Behavior                                                                              |
+|-------|--------------------------------------------------------------------------------------------------|
+| SW-01 | INITIALIZATION: Upon power-up or reset, the system shall initialize all hardware peripherals     |
+|       | (LCD, AD9850, I/O pins) and load the last used frequency from EEPROM. If the EEPROM data is      |
+|       | invalid, it shall initialize to a default frequency of 7,050,000 Hz.                             |
+|-------|--------------------------------------------------------------------------------------------------|
+| SW-02 | MAIN LOOP: The main program loop shall continuously:                                             |
+|       |   a) Check for rotary encoder input and adjust frequency accordingly.                            |
+|       |   b) Update the LCD if the frequency has changed.                                                |
+|       |   c) Send the new frequency to the AD9850.                                                       |
+|       |   d) Process all button inputs (Increment, IF Toggle, Encoder).                                  |
+|       |   e) Manage non-volatile storage (delayed EEPROM write).                                         |
+|       |   f) Process incoming SCPI commands from the serial port.                                        |
++==========================================================================================================+
+| 4.2 Frequency Generation & Control (SW-FRQ)                                                              |
++==========================================================================================================+
+| SW-FRQ-01 | FREQUENCY RANGE: The system shall generate output frequencies from 0 Hz to 30,000,000        |
+|           | Hz (30 MHz), inclusive.                                                                      |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-FRQ-02 | FREQUENCY RESOLUTION: The system shall support a minimum tuning step of 10 Hz.               |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-FRQ-03 | FREQUENCY CALCULATION: The frequency tuning word sent to the AD9850 shall be calculated using|
+|           | the formula: ΔPhase = (f_out * 2^32) / f_clock, where f_clock is the reference clock         |
+|           | (default 125,000,000 Hz).                                                                    |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-FRQ-04 | FREQUENCY LIMITS: The system shall prevent the user from setting a frequency outside the     |
+|           | defined upper (30 MHz) and lower (0 Hz) limits.                                              |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-FRQ-05 | IF OFFSET: The system shall provide an Intermediate Frequency (IF) offset mode. When active, |
+|           | the output frequency shall be calculated as: f_output = f_displayed - f_if_offset (default 0)|
++==========================================================================================================+
+| 4.3 User Interface (SW-UI)                                                                               |
++==========================================================================================================+
+| SW-UI-01 | FREQUENCY DISPLAY: The top line (Line 0) of the LCD shall display the current target          |
+|          | frequency in the format "X.XXX.XXX MHz" (e.g., " 7.050.000 MHz" or "14.050.000 MHz").         |
+|----------|-----------------------------------------------------------------------------------------------|
+| SW-UI-02 | INCREMENT DISPLAY: The bottom line (Line 1) of the LCD shall display the current tuning step  |
+|          | (e.g., "10 Hz", "1 kHz", "2.5 kHz"). The display shall be roughly centered.                   |
+|----------|-----------------------------------------------------------------------------------------------|
+| SW-UI-03 | IF OFFSET INDICATOR: When the IF Offset mode is active, a small dot (".") shall be displayed  |
+|          | in the bottom-right corner of the LCD (position 15,1).                                        |
+|----------|-----------------------------------------------------------------------------------------------|
+| SW-UI-04 | TUNING STEPS: Pressing the Increment Button (A0) shall cycle the tuning step through the      |
+|          | following sequence in a circular manner: 10Hz → 50Hz → 100Hz → 500Hz → 1kHz → 2.5kHz → 5kHz → |
+|          | 10kHz → 100kHz → 1MHz → (back to 10Hz).                                                       |
+|----------|-----------------------------------------------------------------------------------------------|
+| SW-UI-05 | ROTARY TUNING: Rotating the encoder shall increase or decrease the current frequency by the   |
+|          | currently selected tuning step. Clockwise rotation shall increase frequency.                  |
+|----------|-----------------------------------------------------------------------------------------------|
+| SW-UI-06 | IF TOGGLE (BUTTON): Pressing the dedicated IF Offset Button (A5) shall enable the IF Offset   |
+|          | mode. Releasing the button shall disable it.                                                  |
+|----------|-----------------------------------------------------------------------------------------------|
+| SW-UI-07 | IF TOGGLE (ENCODER): Pressing the Rotary Encoder Button (D4) shall toggle the IF Offset mode  |
+|          | on or off with each press.                                                                    |
++==========================================================================================================+
+| 4.4 Memory Management (SW-MEM)                                                                           |
++==========================================================================================================+
+| SW-MEM-01 | DATA VALIDATION: The system shall use a 2-byte validation header in EEPROM (Magic Byte       |
+|           | 0xAA at address 0, Version 0x01 at address 1) to confirm the presence of valid stored data.  |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-MEM-02 | FREQUENCY STORAGE: The current frequency shall be stored as a 32-bit value in EEPROM starting|
+|           | at address 2, with the Most Significant Byte (MSB) stored first.                             |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-MEM-03 | DELAYED WRITE: To preserve EEPROM lifespan, an update to the stored frequency shall only be  |
+|           | written to EEPROM after the frequency has remained unchanged for a period of 2 seconds.      |
++==========================================================================================================+
+| 4.5 Remote Control Interface - SCPI (SW-SCPI)                                                            |
++==========================================================================================================+
+| 4.5.1 General SCPI Requirements                                                                          |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-01| PHYSICAL LAYER: The remote control interface shall operate over the Arduino's hardware       |
+|           | serial port (UART) at a baud rate of 115200, 8 data bits, no parity, 1 stop bit.             |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-02| MESSAGE TERMINATION: The system shall recognize both Line Feed (LF, ASCII 10) and Carriage   |
+|           | Return + Line Feed (CR+LF) as command terminators.                                           |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-03| COMMAND SYNTAX: The parser shall be case-insensitive and shall support both short and long   |
+|           | command forms as defined in the SCPI standard.                                               |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-04| ERROR HANDLING: The system shall maintain a SCPI-compliant error queue. Unrecognized commands|
+|           | or invalid parameters shall be queued as appropriate errors.                                 |
+| 4.5.2 Required SCPI Commands                                                                       	   |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-05| IEEE 488.2 COMMON COMMANDS: The system shall implement the following common commands:        |
+|           |   *IDN?, *RST, *OPC, *OPC?, *WAI, *TST?, *CLS, *ESE <value>, *ESE?, *ESR?, *SRE <value>,     |
+|           |   *SRE?, *STB?.                                                                              |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-06| FREQUENCY SUBSYSTEM: The system shall implement the following FREQuency subsystem commands:  |
+|           |   :FREQuency <value> [UNIT]                                                                  |
+|           |   :FREQuency?                                                                                |
+|           |   :FREQuency:STEP <value> [UNIT]                                                             |
+|           |   :FREQuency:STEP?                                                                           |
+|           |   :FREQuency:LIMIT? <MIN|MAX>                                                                |
+|           |   :FREQuency:OFFSet <value> [UNIT]                                                           |
+|           |   :FREQuency:OFFSet?                                                                         |
+|           |   :FREQuency:OFFSet:STATe <0|1>                                                              |
+|           |   :FREQuency:OFFSet:STATe?                                                                   |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-07| OUTPUT SUBSYSTEM: The system shall implement the following OUTPut subsystem commands:        |
+|           |   :OUTPut <0|1|OFF|ON>                                                                       |
+|           |   :OUTPut?                                                                                   |
+|           |   :OUTPut:PROTection?                                                                        |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-08| DISPLAY SUBSYSTEM: The system shall implement the following DISPlay subsystem commands:      |
+|           |   :DISPlay:TEXT <string>                                                                     |
+|           |   :DISPlay:TEXT:CLEar                                                                        |
+|           |   :DISPlay:CONTrast <value> (Functionality is a placeholder)                                 |
+|           |   :DISPlay:CONTrast? (Returns a fixed value)                                                 |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-09| SYSTEM SUBSYSTEM: The system shall implement the following SYSTem subsystem commands:        |
+|           |   :SYSTem:ERRor?                                                                             |
+|           |   :SYSTem:VERSion?                                                                           |
+|           |   :SYSTem:PRESet                                                                             |
+|           |   :SYSTem:BEEPer <0|1>                                                                       |
+|           |   :SYSTem:BEEPer?                                                                            |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-10| MEMORY SUBSYSTEM: The system shall provide 10 non-volatile memory locations and implement    |
+|           | the following MEMory subsystem commands:                                                     |
+|           |   :MEMory:STORe <location>                                                                   |
+|           |   :MEMory:RECall <location>                                                                  |
+|           |   :MEMory:CLEar <location>                                                                   |
+|-----------|----------------------------------------------------------------------------------------------|
+| SW-SCPI-11| CALIBRATION SUBSYSTEM: The system shall implement a calibration subsystem with password      |
+|           | protection. The following CALibration subsystem commands are required:                       |
+|           |   :CALibration:REFerence <value> [UNIT]                                                      |
+|           |   :CALibration:REFerence?                                                                    |
+|           |   :CALibration:STORe                                                                         |
+|           |   :CALibration:SECure:CODE <code> (To unlock)                                                |
++==========================================================================================================+
+|                                     END OF REQUIREMENTS SPECIFICATION                                    |
++==========================================================================================================+
