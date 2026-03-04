@@ -1,0 +1,534 @@
+User Manual: AD9850 Professional DDS Signal Generator
+
+Document Title: User Manual
+Project: AD9850-Based 30MHz Signal Generator with SCPI Remote Control
+Firmware Version: 4.1
+Document Version: 1.0
+Date: 2026-03-04
+Author: Jan Engelbrecht Pedersen
+
+Table of Contents
+Introduction
+1.1. Product Overview
+1.2. Key Features
+1.3. Specifications
+
+Safety Information
+
+Getting Started
+3.1. Unpacking and Inspection
+3.2. Required Items
+3.3. Powering Up
+3.4. Initial Power-On Behavior
+
+Hardware Overview
+4.1. Front Panel
+4.2. Rear Panel
+
+Local Operation
+5.1. The Display
+5.2. Tuning the Frequency (Rotary Encoder)
+5.3. Selecting the Tuning Step (Increment Button)
+5.4. Using the IF Offset (Intermediate Frequency)
+5.4.1. Momentary Mode (IF Button)
+5.4.2. Toggle Mode (Encoder Button)
+5.4.3. Visual Indicator
+5.5. Saving and Recalling Frequencies
+
+Remote Operation (SCPI)
+6.1. Connecting to a PC
+6.2. Communication Settings
+6.3. SCPI Command Syntax
+6.4. Command Subsystems
+6.4.1. IEEE 488.2 Common Commands
+6.4.2. FREQuency Subsystem
+6.4.3. OUTPut Subsystem
+6.4.4. DISPlay Subsystem
+6.4.5. SYSTem Subsystem
+6.4.6. MEMory Subsystem
+6.4.7. CALibration Subsystem
+6.5. Programming Examples
+6.5.1. Python
+6.5.2. MATLAB
+
+Troubleshooting
+7.1. Power and Display Issues
+7.2. Frequency Output Issues
+7.3. Encoder and Button Issues
+7.4. Remote Control (SCPI) Issues
+7.5. Error Messages
+
+Maintenance
+8.1. General Care
+8.2. Firmware Updates
+8.3. Calibration
+
+Appendices
+9.1. Pin Connection Summary
+9.2. Bill of Materials (BOM)
+9.3. Known Limitations
+
+1. Introduction
+1.1. Product Overview
+Thank you for choosing the AD9850 Professional DDS Signal Generator. 
+This instrument is a precision frequency synthesis device designed for laboratory, educational, and hobbyist applications. 
+It combines the flexibility of Direct Digital Synthesis (DDS) with an intuitive local interface and a professional 
+SCPI (Standard Commands for Programmable Instruments) remote control, allowing it to function as a standalone 
+benchtop unit or as part of an automated test system.
+
+1.2. Key Features
+Frequency Range: 0 Hz to 30 MHz, sine wave output.
+
+High Resolution: 32-bit tuning provides 0.029 Hz steps.
+
+Dual Operation: Use the front panel controls or control it remotely via USB.
+
+Local User Interface: 16x2 LCD display, quadrature rotary encoder with push button, and two function buttons.
+
+SCPI Remote Control: Full compliance with IEEE 488.2 and SCPI-1999.0 standards. Integrate easily with Python, MATLAB, and LabVIEW.
+
+IF Offset Mode: Ideal for receiver and VFO applications.
+
+Non-Volatile Memory: Automatically saves the last used frequency.
+
+Variable Output Amplitude: Adjustable via a front-panel knob.
+
+50-Ohm Output: Designed to drive standard coaxial cables and loads.
+
+1.3. Specifications
+Parameter			Value							Notes
+Frequency Range			0 – 30,000,000 Hz					0 Hz (DC) to 30 MHz
+Resolution			0.0291 Hz						At 125 MHz reference clock
+Accuracy			± Crystal Tolerance					Typically ±50 ppm or better
+Output Amplitude		0 – ~1 Vpp (into 50Ω)					Adjustable via attenuator
+Output Impedance		~50 Ω							After built-in amplifier
+Output Connector		BNC Female	
+Tuning Steps			10, 50, 100, 500 Hz; 1, 2.5, 5, 10, 100 kHz; 1 MHz	Selectable via button or SCPI
+IF Offset Range			0 – 10 MHz						Set via SCPI
+Remote Interface		USB (Virtual COM Port)					115200 baud, 8N1
+SCPI Compliance			IEEE 488.2, SCPI-1999.0	Subset implemented
+Power Supply			+5V DC							Via USB-B connector
+Local Controls			Rotary Encoder, 2x Push Buttons	
+
+2. Safety Information
+This device is intended for indoor use only.
+
+Do not expose to moisture, rain, or excessive heat.
+
+The enclosure should only be opened by a qualified technician for maintenance or calibration. 
+There are no user-serviceable parts inside beyond what is described in the maintenance section.
+
+The output is AC-coupled and designed to drive 50-ohm loads. Avoid connecting to high-voltage sources.
+
+Always handle the device with care to avoid damage to the electronic components.
+
+3. Getting Started
+3.1. Unpacking and Inspection
+Carefully remove the signal generator from its packaging.
+
+Inspect the enclosure for any signs of physical damage.
+
+Ensure the power switch (if present on your enclosure) is in the "OFF" position before connecting power.
+
+3.2. Required Items
+The AD9850 Signal Generator unit.
+
+A standard USB-A to USB-B cable for power and remote control.
+
+A USB power source (e.g., computer, 5V USB wall adapter with at least 500mA capacity).
+
+For signal output, a BNC cable and, if necessary, a 50-ohm termination or the device under test.
+
+3.3. Powering Up
+Connect the USB-B port on the rear panel of the generator to your computer or USB power adapter using the USB cable.
+
+If using a computer, the device will appear as a new COM port (e.g., COM3 on Windows, /dev/ttyACM0 on Linux).
+
+Turn on the power switch (if applicable). The LCD backlight should illuminate, a
+nd the display will show the startup sequence before showing the main frequency screen.
+
+3.4. Initial Power-On Behavior
+Upon successful startup, the LCD will display:
+
+Line 0: A frequency, e.g., 7.050.000 MHz (the last saved frequency or the default 7.050 MHz).
+
+Line 1: A tuning step, e.g., 10 Hz, centered on the display.
+The device is now ready for use.
+
+4. Hardware Overview
+4.1. Front Panel
+LCD Display (16x2): Shows the current frequency and status.
+
+Rotary Encoder Knob:
+
+Rotate: Increase or decrease the frequency.
+
+Press: Toggle the IF Offset mode on/off.
+
+Increment Button (Inc): Press to cycle through the available tuning steps (10 Hz → 1 MHz).
+
+IF Button: Press and hold to temporarily enable the IF Offset. Release to disable.
+
+Attenuator Knob: Rotate to adjust the output signal amplitude from minimum to maximum.
+
+4.2. Rear Panel
+USB-B Port: Provides +5V power to the unit and serves as the remote control (SCPI) communication interface.
+
+BNC Output: The main signal output. Connect this to your oscilloscope, counter, or device under test using a BNC cable.
+
+Power Switch (Optional): Some enclosures may include a power switch to interrupt the USB power line.
+
+5. Local Operation
+5.1. The Display
+The 16x2 LCD is organized as follows:
+
+Line 0 (Top): Displays the target frequency. It uses dots as thousands separators for readability.
+
+Example for 7,050,000 Hz: 7.050.000 MHz
+
+Example for 14,050,000 Hz: 14.050.000 MHz
+
+Line 1 (Bottom): Shows the current status.
+
+Left/Center: The current tuning step (e.g., 10 Hz, 2.5 kHz, 1 MHz).
+
+Bottom-Right Corner: A small dot (.) appears here when the IF Offset mode is active.
+
+5.2. Tuning the Frequency (Rotary Encoder)
+Turn the Rotary Encoder knob clockwise to increase the output frequency.
+
+Turn it counter-clockwise to decrease the output frequency.
+
+The frequency will change by the currently selected Tuning Step. The LCD updates instantly.
+
+The frequency will stop (saturate) at the hardware limits of 0 Hz and 30 MHz. You cannot tune past these limits.
+
+5.3. Selecting the Tuning Step (Increment Button)
+Briefly press the Increment (Inc) button to advance to the next tuning step in the sequence.
+
+The sequence is circular:
+10 Hz → 50 Hz → 100 Hz → 500 Hz → 1 kHz → 2.5 kHz → 5 kHz → 10 kHz → 100 kHz → 1 MHz → (back to 10 Hz).
+
+The new step value will be displayed on the bottom line of the LCD.
+
+5.4. Using the IF Offset (Intermediate Frequency)
+This feature subtracts a fixed frequency (the IF) from the displayed frequency. 
+It is useful when using the generator as a Local Oscillator (LO) in a superheterodyne receiver, 
+where the LO frequency is the receive frequency minus the IF.
+
+Formula: Output Frequency = Displayed Frequency - IF Offset Value.
+
+The IF Offset value can only be set remotely via SCPI. The default is 0 Hz.
+
+5.4.1. Momentary Mode (IF Button)
+Press and hold the IF button on the front panel. 
+The IF Offset mode will be activated for as long as the button is held down. 
+You will see the indicator dot appear on the LCD.
+
+Release the button to deactivate the offset (the dot disappears).
+
+5.4.2. Toggle Mode (Encoder Button)
+Press the Rotary Encoder knob inwards. Each press will toggle the IF Offset mode on or off.
+
+The indicator dot will appear or disappear accordingly.
+
+5.4.3. Visual Indicator
+Regardless of how it was activated, a small dot (.) in the bottom-right corner of the display 
+(position 15,1) clearly indicates that the IF Offset is active and the output frequency differs 
+from the displayed frequency.
+
+5.5. Saving and Recalling Frequencies
+The generator automatically saves the current frequency to its internal EEPROM memory 2 seconds 
+after the last change. When you power off and on the device, it will recall this last saved frequency. 
+There is no manual save function via the local controls.
+
+6. Remote Operation (SCPI)
+6.1. Connecting to a PC
+Connect the generator to your computer via the USB-B port.
+
+The computer will recognize it as a new serial (COM) port. You may need to install drivers for the USB-to-serial chip (e.g., CH340G drivers) if they are not already present.
+
+Note the COM port number assigned (e.g., COM5 on Windows, /dev/ttyUSB0 on Linux).
+
+6.2. Communication Settings
+Use a serial terminal program (like PuTTY, Tera Term) or a programming library (like PySerial) with the following settings:
+
+Baud Rate: 115200
+
+Data Bits: 8
+
+Parity: None
+
+Stop Bits: 1
+
+Flow Control: None
+
+Line Ending: LF (\n) or CR+LF (\r\n)
+
+6.3. SCPI Command Syntax
+Commands are case-insensitive. FREQ 1 MHz and freq 1 mhz are both accepted.
+
+Both short and long forms are supported. For example, :FREQuency:OFFSet can be sent as :FREQ:OFFS.
+
+Parameters can include units (Hz, kHz, MHz, GHz).
+
+Queries end with a ? and the instrument responds with the requested value, followed by a newline.
+
+6.4. Command Subsystems
+6.4.1. IEEE 488.2 Common Commands
+Command		Function			Example Response / Notes
+*IDN?		Identification query		AD7C,AD9850 Generator,4.1,SCPI-1.0
+*RST		Reset to default state		Sets 7.05 MHz, 10 Hz step, output on.
+*OPC		Operation complete		Sets the OPC bit in the ESR.
+*OPC?		Operation complete query	Returns 1.
+*WAI		Wait to continue		No effect in this implementation.
+*TST?		Self-test query	Returns 0 if pass, 1 if clock mismatch.
+*CLS		Clear status			Clears all status registers and error queue.
+*ESE <value>	Set Event Status Enable	*ESE 60
+*ESE?		Query Event Status Enable	Returns the current ESE value.
+*ESR?		Query Event Status Register	Returns the value and clears the register.
+*SRE <value>	Set Service Request Enable	*SRE 16
+*SRE?		Query Service Request Enable	Returns the current SRE value.
+*STB?		Read Status Byte		Returns the status byte value.
+
+6.4.2. FREQuency Subsystem
+Command					Description				Example
+:FREQuency <value> [UNIT]		Set output frequency			:FREQ 10.7 MHz
+:FREQuency?				Query current frequency			Response: 	10700000
+:FREQuency:STEP <value> [UNIT]		Set tuning step				:FREQ:STEP 2.5 kHz
+:FREQuency:STEP?			Query tuning step			Response: 2500
+:FREQuency:LIMIT? MIN			Query minimum frequency			Response: 0
+:FREQuency:LIMIT? MAX			Query maximum frequency			Response: 30000000
+:FREQuency:OFFSet <value> [UNIT]	Set IF offset				:FREQ:OFFS 455 kHz
+:FREQuency:OFFSet?			Query IF offset				Response: 455000
+:FREQuency:OFFSet:STATe <0|1>		Enable/disable IF offset		:FREQ:OFFS:STAT 1 (enable)
+:FREQuency:OFFSet:STATe?		Query IF offset state			Response: 1 (if enabled)
+
+6.4.3. OUTPut Subsystem
+Command	Description	Example
+:OUTPut <0|1|OFF|ON>	Enable/disable output	:OUTP OFF or :OUTP 0
+:OUTPut?	Query output state	Response: 1 (if ON)
+:OUTPut:PROTection?	Query protection status	Response: 0 (always 0 in this version)
+6.4.4. DISPlay Subsystem
+Command	Description	Example
+:DISPlay:TEXT <string>	Show custom text on line 1	:DISP:TEXT "Hello World"
+:DISPlay:TEXT:CLEar	Clear custom text	:DISP:TEXT:CLE
+:DISPlay:CONTrast <value>	Set contrast (placeholder)	:DISP:CONT 50
+:DISPlay:CONTrast?	Query contrast	Response: 50
+6.4.5. SYSTem Subsystem
+Command	Description	Example
+:SYSTem:ERRor?	Get next error from queue	Response: 0,"No error"
+:SYSTem:VERSion?	Query SCPI version	Response: 1999.0
+:SYSTem:PRESet	Preset to default values	:SYST:PRES
+:SYSTem:BEEPer <0|1>	Enable/disable beeper	:SYST:BEEP 1
+:SYSTem:BEEPer?	Query beeper state	Response: 1
+6.4.6. MEMory Subsystem
+Command	Description	Example
+:MEMory:STORe <location>	Store current settings	:MEM:STOR 2 (store in location 2)
+:MEMory:RECall <location>	Recall stored settings	:MEM:REC 2 (recall location 2)
+:MEMory:CLEar <location>	Clear memory location	:MEM:CLE 2
+6.4.7. CALibration Subsystem
+Command	Description	Example
+:CALibration:SECure:CODE <code>	Unlock calibration	:CAL:SEC:CODE 1234
+:CALibration:REFerence <value> [UNIT]	Set reference clock	:CAL:REF 125.0 MHz
+:CALibration:REFerence?	Query reference clock	Response: 125000000
+:CALibration:STORe	Store calibration	:CAL:STOR
+:CALibration:LOCK	Lock calibration	:CAL:LOCK
+6.5. Programming Examples
+6.5.1. Python
+python
+import serial
+import time
+
+# Configure serial port (replace 'COM3' with your port)
+ser = serial.Serial('COM3', 115200, timeout=1)
+time.sleep(2) # Allow time for reset
+
+# Query instrument identification
+ser.write(b'*IDN?\n')
+response = ser.readline().decode().strip()
+print(f"Connected to: {response}")
+
+# Set frequency to 14.150 MHz
+ser.write(b'FREQ 14.150 MHz\n')
+time.sleep(0.1)
+
+# Query and print the frequency
+ser.write(b'FREQ?\n')
+freq = ser.readline().decode().strip()
+print(f"Frequency set to: {freq} Hz")
+
+# Enable output
+ser.write(b'OUTP ON\n')
+print("Output enabled.")
+
+ser.close()
+6.5.2. MATLAB
+matlab
+% Create serial object
+s = serialport('COM3', 115200);
+configureTerminator(s, "LF"); % Set line feed as terminator
+
+% Query instrument identification
+writeline(s, '*IDN?');
+idn = readline(s);
+disp(['Connected to: ' idn])
+
+% Set frequency to 7.050 MHz
+writeline(s, 'FREQ 7.050 MHz');
+pause(0.1);
+
+% Query and display frequency
+writeline(s, 'FREQ?');
+freq = readline(s);
+disp(['Frequency: ' freq ' Hz'])
+
+% Clear the serial object
+clear s
+7. Troubleshooting
+
+7.1. Power and Display Issues
+
+Symptom						Likely Cause						Solution
+LCD is blank, no backlight			No power to Arduino					Check USB cable and power source. Ensure the power switch (if 														present) is ON.
+LCD is lit but shows no characters or blocks	Contrast is set incorrectly				Adjust the contrast potentiometer (10k pot near the LCD) using a 													small screwdriver.
+LCD shows "snow" or random characters		Loose LCD data cable or incorrect 4-bit mode wiring	Power off and check all connections between Arduino and LCD pins (D4-													D7, RS, E).
+Unit does not power on via USB			Faulty USB cable or insufficient power from hub		Try a different USB cable and connect directly to a computer port or 													a powered USB hub.
+7.2. Frequency Output Issues
+Symptom	Likely Cause	Solution
+No signal at BNC output	Output is disabled via SCPI	Send the command OUTP ON via serial.
+Attenuator knob turned fully counter-clockwise	Turn the attenuator knob clockwise to increase amplitude.
+Output amplifier not working	Check the BF198 transistor and its biasing resistors (RB1, RB2, RE). Verify +5V at the collector.
+AD9850 module not powered	Check the +5V and GND connections to the AD9850 module.
+Frequency is incorrect	IF Offset is active	Check for the dot on the LCD. Disable IF offset via the encoder button or SCPI (:FREQ:OFFS:STAT 0).
+Reference clock is miscalibrated	The default is 125 MHz. Only change this via the :CALibration subsystem if you have a known good frequency standard.
+Output is distorted or has low amplitude	Overloading the output (load < 50 ohms)	Ensure you are driving a high-impedance load or a properly terminated 50-ohm system.
+Attenuator setting is too high	Reduce attenuation (turn knob clockwise).
+BF198 amplifier is oscillating	Check the layout of the amplifier stage. Ensure bypass capacitor (C_bypass) is close to the transistor.
+
+7.3. Encoder and Button Issues
+Symptom							Likely Cause								Solution
+Encoder tuning is jerky or misses steps			Debouncing time too short (unlikely) or poor connections		Check wiring of encoder pins A and B to D2 																and D3. Ensure they are secure.
+Main loop is overloaded (unlikely)			This is usually a hardware contact issue within the encoder itself. 	Try a different encoder.
+Increment button doesn't work or cycles multiple steps	Button bouncing or poor connection					Check wiring of the button to A0 and GND. The 																software has a delay, but a hardware debounce 																capacitor (0.1µF) across the button contacts 																can help.
+IF button doesn't respond				Button wiring issue							Check the connection from the button to A5 																and GND.
+Encoder button doesn't toggle IF offset			Shared pin conflict (LCD D7)						Ensure the LCD is functioning correctly. The 																firmware manages this, but a hardware fault 																on D4/LCD D7 could interfere.
+7.4. Remote Control (SCPI) Issues
+Symptom							Likely Cause						Solution
+No response to SCPI commands				Wrong COM port						Verify the correct COM port in your device manager.
+Wrong baud rate						Ensure your terminal or software is set to 115200 baud.
+Wrong line ending					Ensure commands end with LF (\n) or CR+LF (\r\n).
+Garbled characters in response				Baud rate mismatch					Double-check the baud rate setting on both the generator 														(fixed at 115200) and your software.
+:SYSTem:ERRor? returns -100,"Error -100"		An unrecognized command was sent			Check the command syntax. Commands are case-insensitive but 														must match the SCPI structure.
+
+7.5. Error Messages
+When an error occurs, it is placed in the SCPI error queue. You can read the oldest error with the :SYSTem:ERRor? command. Common error codes include:
+
+Code	Description			Meaning
+0	No error			The queue is empty.
+-100	Command error			Unrecognized command or syntax error.
+-102	Invalid parameter		The parameter provided is out of range or the wrong type.
+-131	Invalid suffix			An unrecognized unit (e.g., "dBm") was used.
+-138	Suffix not allowed		A unit was provided where none was expected.
+-108	Parameter not allowed		Too many parameters were provided.
+-109	Missing parameter		A required parameter was missing.
+-225	Out of memory			The SCPI input buffer has overflowed. Slow down the command rate.
+-240	Calibration locked		Attempted to set a calibration parameter without first unlocking.
+-241	Wrong calibration password	The password provided with :CAL:SEC:CODE is incorrect.
+8. Maintenance
+8.1. General Care
+Keep the device in a clean, dry environment.
+
+Store it in its enclosure to protect it from dust and physical damage.
+
+Periodically check that all connectors and knobs are secure.
+
+8.2. Firmware Updates
+If an updated version of the firmware becomes available, it can be programmed onto the Arduino UNO:
+
+Download the new .ino file from the repository.
+
+Install the Arduino IDE on your computer.
+
+Connect the generator's Arduino directly to your computer via USB (you may need to disconnect other wires if 
+the USB port is used for power, as this will also power the rest of the circuit, which is fine).
+
+Open the .ino file in the IDE.
+
+Select the correct Board ("Arduino UNO") and Port.
+
+Click the "Upload" button.
+
+After a successful upload, the generator will restart with the new firmware.
+
+8.3. Calibration
+Over time, the 125 MHz crystal oscillator on the AD9850 module may drift slightly. 
+If you have access to a precise frequency counter, you can calibrate the generator using the SCPI commands.
+
+Required Equipment: A frequency counter with accuracy better than 1 ppm at 10 MHz.
+Procedure:
+
+Connect the generator's BNC output to the frequency counter.
+
+Set the generator to output 10 MHz (e.g., FREQ 10 MHz).
+
+Note the exact frequency reading on the counter. It will likely be slightly off, e.g., 10,000,123 Hz.
+
+Unlock the calibration subsystem: CAL:SEC:CODE 1234.
+
+Calculate the new reference clock frequency needed to correct the output.
+
+The formula is: New_Ref = (Measured_Freq / 10,000,000) * 125,000,000.
+
+For the example above: (10,000,123 / 10,000,000) * 125,000,000 = 125,001,537.5 Hz.
+
+Set the new reference clock: CAL:REF 125001537.5 Hz.
+
+Store this calibration value so it persists after a power cycle: CAL:STOR.
+
+Lock the calibration to prevent accidental changes: CAL:LOCK.
+
+Verify the output is now exactly 10,000,000 Hz.
+
+9. Appendices
+9.1. Pin Connection Summary
+Component		Arduino Pin
+AD9850 W_CLK		D8
+AD9850 FQ_UD		D9
+AD9850 DATA		D11
+AD9850 RESET		D10
+LCD RS			D12
+LCD Enable (E)		D13
+LCD D4			D7
+LCD D5			D6
+LCD D6			D5
+LCD D7			D4
+Encoder A		D2
+Encoder B		D3
+Encoder Button		D4 (shared with LCD D7)
+Increment Button	A0
+IF Button		A5
+
+9.2. Bill of Materials (BOM)
+Item	Reference	Description				Quantity
+1	U1		Arduino UNO R3 or clone			1
+2	U2		AD9850 DDS Module (125 MHz)		1
+3	U3		16x2 LCD with HD44780 driver		1
+4	R1		10 kΩ Potentiometer (Contrast)		1
+5	R2		1 kΩ Potentiometer (Attenuator)		1
+6	Q1		BF198 NPN RF Transistor (or eq.)	1
+7	R_B1		22 kΩ Resistor				1
+8	R_B2		10 kΩ Resistor				1
+9	R_E		150 Ω Resistor				1
+10	C_in		0.1 µF Ceramic Capacitor		1
+11	C_out		10 µF Electrolytic Capacitor		1
+12	C_bypass	0.1 µF Ceramic Capacitor		1
+13	SW1		6x6mm Tactile Switch			2
+14	SW2		Quadrature Rotary Encoder w/ PB		1
+15	J1		BNC Female Chassis Connector		1
+9.3. Known Limitations
+ID	Limitation	Description
+LIM-01	SCPI Contrast Control	The :DISPlay:CONTrast command is a placeholder and does not adjust hardware contrast.
+LIM-02	Output Protection	The :OUTPut:PROTection? query always returns 0. No hardware output protection is implemented.
+LIM-03	EEPROM Lifespan	The EEPROM is rated for ~100,000 writes. Under normal use (saving a frequency every 2 seconds of inactivity), this should last several years.
+LIM-04	Command Rate	Sending commands faster than 500 per second may cause buffer overflow. Keep command rates moderate.
